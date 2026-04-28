@@ -1,6 +1,6 @@
 {
-  "name": "@vibecontrols/vibe-plugin-graphiql",
-  "version": "2026.428.1",
+  "name": "@vibecontrols/vibe-plugin-tool-graphiql",
+  "version": "2026.428.3",
   "main": "./dist/index.js",
   "type": "module",
   "engines": {
@@ -56,14 +56,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/algoshred/vibe-plugin-graphiql.git"
+    "url": "git+https://github.com/algoshred/vibe-plugin-tool-graphiql.git"
   },
   "bugs": {
-    "url": "https://github.com/algoshred/vibe-plugin-graphiql/issues"
+    "url": "https://github.com/algoshred/vibe-plugin-tool-graphiql/issues"
   },
   "homepage": "https://vibecontrols.com",
   "publishConfig": {
-    "access": "restricted",
+    "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "files": [
