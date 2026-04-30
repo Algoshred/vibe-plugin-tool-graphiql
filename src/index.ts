@@ -47,9 +47,7 @@ export const vibePlugin: VibePlugin = {
     const { createGraphiQLRoutes } = await import("./routes.js");
     app.use(createGraphiQLRoutes(hostServices));
 
-    console.log(
-      "  Plugin 'graphiql' registered routes: /api/graphiql",
-    );
+    console.log("  Plugin 'graphiql' registered routes: /api/graphiql");
   },
 };
 
