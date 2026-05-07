@@ -31,6 +31,12 @@ export type {
 // ---------------------------------------------------------------------------
 
 export const vibePlugin: VibePlugin = {
+  capabilities: {
+    storage: "rw",
+    subprocess: true,
+    audit: true,
+    telemetry: true,
+  },
   name: "graphiql",
   version: "1.0.0",
   description: "GraphQL Playground (GraphiQL)",
@@ -43,6 +49,7 @@ export const vibePlugin: VibePlugin = {
   },
 
   async onServerStart(app: Elysia, hostServices: HostServices) {
+    hostServices?.telemetry?.emit("tool.ready", { provider: "graphiql" });
     // Register REST API routes
     const { createGraphiQLRoutes } = await import("./routes.js");
     app.use(createGraphiQLRoutes(hostServices));

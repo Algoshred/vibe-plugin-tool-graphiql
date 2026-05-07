@@ -34,6 +34,9 @@ export interface ServiceRegistry {
 // -- Host services -----------------------------------------------------------
 
 export interface HostServices {
+  telemetry?: {
+    emit: (name: string, payload?: Record<string, unknown>) => void;
+  };
   storage: StorageProvider;
   eventBus?: EventBus;
   serviceRegistry?: ServiceRegistry;
@@ -41,7 +44,18 @@ export interface HostServices {
 
 // -- Plugin contract ---------------------------------------------------------
 
+export interface PluginCapabilities {
+  storage?: "none" | "read" | "rw";
+  secrets?: "none" | "read" | "rw";
+  gateway?: boolean;
+  broadcast?: boolean;
+  subprocess?: boolean;
+  audit?: boolean;
+  telemetry?: boolean;
+}
+
 export interface VibePlugin {
+  capabilities?: PluginCapabilities;
   name: string;
   version: string;
   description?: string;
