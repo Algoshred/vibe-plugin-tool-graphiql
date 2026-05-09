@@ -19,7 +19,9 @@ import {
   createLifecycleHooks,
   TelemetryEmitter,
   type HostServices,
+  type ProfileContext,
   type VibePlugin,
+  type VibePluginFactory,
 } from "@vibecontrols/plugin-sdk";
 
 export type { GraphiQLConfig } from "./types.js";
@@ -39,54 +41,60 @@ type GraphiQLVibePlugin = VibePlugin & {
 };
 
 const PLUGIN_NAME = "graphiql";
-const PLUGIN_VERSION = "2026.508.3";
+const PLUGIN_VERSION = "2026.509.1";
 
-const lifecycle = createLifecycleHooks({
-  name: PLUGIN_NAME,
-  telemetryEventName: "tool.ready",
-  onInit: (hostServices: HostServices) => {
-    const telemetry = new TelemetryEmitter(
-      PLUGIN_NAME,
-      PLUGIN_VERSION,
-      hostServices,
-    );
-    telemetry.emitEvent("tool.ready", { provider: "graphiql" });
-  },
-});
+export const createPlugin: VibePluginFactory = (
+  _ctx: ProfileContext,
+): VibePlugin => {
+  const lifecycle = createLifecycleHooks({
+    name: PLUGIN_NAME,
+    telemetryEventName: "tool.ready",
+    onInit: (hostServices: HostServices) => {
+      const telemetry = new TelemetryEmitter(
+        PLUGIN_NAME,
+        PLUGIN_VERSION,
+        hostServices,
+      );
+      telemetry.emitEvent("tool.ready", { provider: "graphiql" });
+    },
+  });
 
-export const vibePlugin: GraphiQLVibePlugin = {
-  capabilities: {
-    storage: "rw",
-    subprocess: true,
-    audit: true,
-    telemetry: true,
-  },
-  name: PLUGIN_NAME,
-  version: PLUGIN_VERSION,
-  description: "GraphQL Playground (GraphiQL)",
-  tags: ["frontend", "integration"],
-  hasUI: true,
-  apiPrefix: "/api/graphiql",
-  ui: {
-    staticDir: join(import.meta.dir, "ui"),
-    title: "GraphQL Playground",
-  },
+  const plugin: GraphiQLVibePlugin = {
+    capabilities: {
+      storage: "rw",
+      subprocess: true,
+      audit: true,
+      telemetry: true,
+    },
+    name: PLUGIN_NAME,
+    version: PLUGIN_VERSION,
+    description: "GraphQL Playground (GraphiQL)",
+    tags: ["frontend", "integration"],
+    hasUI: true,
+    apiPrefix: "/api/graphiql",
+    ui: {
+      staticDir: join(import.meta.dir, "ui"),
+      title: "GraphQL Playground",
+    },
 
-  async onServerStart(app: unknown, hostServices: HostServices) {
-    await lifecycle.onServerStart(app, hostServices);
+    async onServerStart(app: unknown, hostServices: HostServices) {
+      await lifecycle.onServerStart(app, hostServices);
 
-    const elysiaApp = app as { use: (plugin: unknown) => unknown };
+      const elysiaApp = app as { use: (plugin: unknown) => unknown };
 
-    // Register REST API routes
-    const { createGraphiQLRoutes } = await import("./routes.js");
-    elysiaApp.use(createGraphiQLRoutes(hostServices));
+      // Register REST API routes
+      const { createGraphiQLRoutes } = await import("./routes.js");
+      elysiaApp.use(createGraphiQLRoutes(hostServices));
 
-    process.stdout.write(
-      "  Plugin 'graphiql' registered routes: /api/graphiql\n",
-    );
-  },
+      process.stdout.write(
+        "  Plugin 'graphiql' registered routes: /api/graphiql\n",
+      );
+    },
 
-  onServerStop: lifecycle.onServerStop,
+    onServerStop: lifecycle.onServerStop,
+  };
+
+  return plugin;
 };
 
-export default vibePlugin;
+export default createPlugin;
