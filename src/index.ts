@@ -1,5 +1,5 @@
 /**
- * @burdenoff/vibe-plugin-graphiql v1.0.0
+ * @vibecontrols/vibe-plugin-tool-graphiql
  *
  * GraphQL Playground (GraphiQL) embedded as an iframe within the
  * VibeControls agent. Stores per-vibe GraphQL endpoint configuration
@@ -9,36 +9,60 @@
  *   - Elysia routes: /api/graphiql/*  (REST API for config management)
  *   - Static UI:     src/ui/          (GraphiQL HTML served via staticDir)
  *
- * Install: vibe plugin install @burdenoff/vibe-plugin-graphiql
+ * Migrated to consume `@vibecontrols/plugin-sdk` for the contract,
+ * lifecycle, and telemetry helpers.
  */
 
 import { join } from "node:path";
-import type { Elysia } from "elysia";
-import type { HostServices, VibePlugin } from "./types.js";
 
-// Re-export types for external consumers
-export type {
-  VibePlugin,
-  HostServices,
-  StorageProvider,
-  EventBus,
-  ServiceRegistry,
-  GraphiQLConfig,
-} from "./types.js";
+import {
+  createLifecycleHooks,
+  TelemetryEmitter,
+  type HostServices,
+  type VibePlugin,
+} from "@vibecontrols/plugin-sdk";
 
-// ---------------------------------------------------------------------------
-// Plugin definition
-// ---------------------------------------------------------------------------
+export type { GraphiQLConfig } from "./types.js";
 
-export const vibePlugin: VibePlugin = {
+/**
+ * Local extension of the SDK contract — `hasUI` and `ui.staticDir` are
+ * agent-host extensions consumed by the plugin loader to mount static
+ * assets. The SDK contract leaves these to the host implementation.
+ */
+type GraphiQLVibePlugin = VibePlugin & {
+  hasUI?: boolean;
+  publicPaths?: string[];
+  ui?: {
+    staticDir: string;
+    title: string;
+  };
+};
+
+const PLUGIN_NAME = "graphiql";
+const PLUGIN_VERSION = "2026.508.3";
+
+const lifecycle = createLifecycleHooks({
+  name: PLUGIN_NAME,
+  telemetryEventName: "tool.ready",
+  onInit: (hostServices: HostServices) => {
+    const telemetry = new TelemetryEmitter(
+      PLUGIN_NAME,
+      PLUGIN_VERSION,
+      hostServices,
+    );
+    telemetry.emitEvent("tool.ready", { provider: "graphiql" });
+  },
+});
+
+export const vibePlugin: GraphiQLVibePlugin = {
   capabilities: {
     storage: "rw",
     subprocess: true,
     audit: true,
     telemetry: true,
   },
-  name: "graphiql",
-  version: "1.0.0",
+  name: PLUGIN_NAME,
+  version: PLUGIN_VERSION,
   description: "GraphQL Playground (GraphiQL)",
   tags: ["frontend", "integration"],
   hasUI: true,
@@ -48,14 +72,21 @@ export const vibePlugin: VibePlugin = {
     title: "GraphQL Playground",
   },
 
-  async onServerStart(app: Elysia, hostServices: HostServices) {
-    hostServices?.telemetry?.emit("tool.ready", { provider: "graphiql" });
+  async onServerStart(app: unknown, hostServices: HostServices) {
+    await lifecycle.onServerStart(app, hostServices);
+
+    const elysiaApp = app as { use: (plugin: unknown) => unknown };
+
     // Register REST API routes
     const { createGraphiQLRoutes } = await import("./routes.js");
-    app.use(createGraphiQLRoutes(hostServices));
+    elysiaApp.use(createGraphiQLRoutes(hostServices));
 
-    console.log("  Plugin 'graphiql' registered routes: /api/graphiql");
+    process.stdout.write(
+      "  Plugin 'graphiql' registered routes: /api/graphiql\n",
+    );
   },
+
+  onServerStop: lifecycle.onServerStop,
 };
 
 export default vibePlugin;
