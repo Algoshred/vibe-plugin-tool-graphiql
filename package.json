@@ -33,7 +33,7 @@
     "url": "https://github.com/tvvignesh"
   },
   "license": "SEE LICENSE IN LICENSE",
-  "description": "GraphQL Playground (GraphiQL) — embedded in VibeControls agent",
+  "description": "GraphQL Playground (GraphiQL) \u2014 embedded in VibeControls agent",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/bun": "^1.2.10",
@@ -63,8 +63,8 @@
   },
   "homepage": "https://vibecontrols.com",
   "publishConfig": {
-    "access": "restricted",
-    "registry": "https://verdaccio.tooling.internal.burdenoff.com/"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "files": [
     "dist/**/*",
