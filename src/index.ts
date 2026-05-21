@@ -31,12 +31,38 @@ export type { GraphiQLConfig } from "./types.js";
  * agent-host extensions consumed by the plugin loader to mount static
  * assets. The SDK contract leaves these to the host implementation.
  */
+interface PluginCapabilitiesV1 {
+  restPaths: string[];
+  wsTopics: string[];
+  rpcMethods: string[];
+}
+
+interface PluginContributionV1 {
+  mountPoint: string;
+  id: string;
+  title: string;
+  icon?: string;
+  order?: number;
+  runtimes: Array<"iframe" | "in-process">;
+  capabilities: PluginCapabilitiesV1;
+}
+
 type GraphiQLVibePlugin = VibePlugin & {
   hasUI?: boolean;
   publicPaths?: string[];
   ui?: {
     staticDir: string;
     title: string;
+    icon?: string;
+    capabilities?: PluginCapabilitiesV1;
+    /**
+     * PR-12 — declares this plugin's UI as a `vibe.detailTab`
+     * contribution so it shows up in the Vibe detail page's tab strip
+     * when the host's `vibes.tabs.graphiql-iframe` flag is on. The
+     * existing inline GraphQL Playground tab in microfe-vibecontrols
+     * is filtered out when the flag is on (PR-13).
+     */
+    contributions?: PluginContributionV1[];
   };
 };
 
@@ -75,6 +101,36 @@ export const createPlugin: VibePluginFactory = (
     ui: {
       staticDir: join(import.meta.dir, "ui"),
       title: "GraphQL Playground",
+      icon: "Network",
+      capabilities: {
+        restPaths: [
+          "/ui/graphiql",
+          "/api/graphiql",
+        ],
+        wsTopics: [],
+        rpcMethods: ["getContext"],
+      },
+      contributions: [
+        {
+          mountPoint: "vibe.detailTab",
+          id: "plugin:graphiql",
+          title: "GraphQL",
+          icon: "Network",
+          // Same order slot as the inline `graphqlPlayground` tab so
+          // the strip looks identical to the user when the migration
+          // flag flips on.
+          order: 90,
+          runtimes: ["iframe"],
+          capabilities: {
+            restPaths: [
+              "/ui/graphiql",
+              "/api/graphiql",
+            ],
+            wsTopics: [],
+            rpcMethods: ["getContext"],
+          },
+        },
+      ],
     },
 
     async onServerStart(app: unknown, hostServices: HostServices) {
