@@ -148,6 +148,39 @@ export const createPlugin: VibePluginFactory = (
     },
 
     onServerStop: lifecycle.onServerStop,
+
+    async onServerReady() {
+      try {
+        const sdkContext = (await import("@vibecontrols/plugin-sdk/context")) as {
+          registerContextProvider?: (provider: {
+            name: string;
+            timeoutMs?: number;
+            getContext: () => Promise<{
+              pluginName: string;
+              description?: string;
+              data: Record<string, unknown>;
+            }>;
+          }) => void;
+        };
+        sdkContext.registerContextProvider?.({
+          name: "tool-graphiql",
+          timeoutMs: 500,
+          async getContext() {
+            return {
+              pluginName: "tool-graphiql",
+              description:
+                "GraphiQL playground capability metadata for the LLM Context feature.",
+              data: {
+                pluginVersion: PLUGIN_VERSION,
+                apiPrefix: "/api/graphiql",
+              },
+            };
+          },
+        });
+      } catch {
+        // SDK doesn't support context — skip silently
+      }
+    },
   };
 
   return plugin;
