@@ -235,7 +235,17 @@
         // -- Main -------------------------------------------------------------
 
         var vibeId = getQueryParam("vibeId");
+        // Auth: the host hands the iframe a narrowly-scoped, single-use
+        // iframe token via `?vt=` (it replaces the legacy `?apiKey=`
+        // master-key param). Forward it as `x-vibe-iframe-token`. `apiKey`
+        // is still read for backward-compat with older embedders.
+        var iframeToken = getQueryParam("vt") || "";
         var apiKey = getQueryParam("apiKey") || "";
+        // The agent's data-plane is profile-scoped: every `/api/*` call must
+        // be `/api/profiles/<profile>/...` — bare `/api/*` is rejected (410).
+        // The host passes the owning profile via `?profile=`; default to the
+        // daemon's boot profile ("default") for single-profile agents.
+        var profile = getQueryParam("profile") || "default";
 
         if (!vibeId) {
           showError(
@@ -247,11 +257,18 @@
 
         var apiBase = getApiBase();
         var configUrl =
-          apiBase + "/api/graphiql/config/" + encodeURIComponent(vibeId);
+          apiBase +
+          "/api/profiles/" +
+          encodeURIComponent(profile) +
+          "/graphiql/config/" +
+          encodeURIComponent(vibeId);
 
         var headers = {
           "Content-Type": "application/json",
         };
+        if (iframeToken) {
+          headers["x-vibe-iframe-token"] = iframeToken;
+        }
         if (apiKey) {
           headers["x-agent-api-key"] = apiKey;
         }
@@ -277,7 +294,9 @@
             if (err.message === "NO_CONFIG") {
               showError(
                 "No GraphQL endpoint configured",
-                "Use PUT /api/graphiql/config/" +
+                "Use PUT /api/profiles/" +
+                  profile +
+                  "/graphiql/config/" +
                   vibeId +
                   " to set a graphqlUrl before opening the playground.",
               );
