@@ -1,9 +1,19 @@
 /**
  * REST API routes for the graphiql plugin.
  *
- * Prefix: /api/graphiql
+ * Two parallel mounts (P0-SEC-03 — split svc vs browser):
+ *   - /api/graphiql            — server-to-server (svc → agent,
+ *                                x-agent-api-key authed)
+ *   - /api/plugins/graphiql/ui — browser (iframe XHR, iframe-token authed,
+ *                                matches the agent iframe-token allow-list
+ *                                `/api/plugins/<plugin>/ui[/...]`)
  *
- * Routes:
+ * Both prefixes share the same handler module; only the mount prefix
+ * differs. Callers should use whichever surface matches their auth model
+ * — the agent treats both as equivalent storage operations under the
+ * `graphiql` namespace.
+ *
+ * Routes (under either prefix):
  *   GET    /config/:vibeId  - Get GraphQL endpoint config for a vibe
  *   PUT    /config/:vibeId  - Save GraphQL endpoint config for a vibe
  *   DELETE /config/:vibeId  - Remove config for a vibe
@@ -21,14 +31,17 @@ import type { AgentStorageProvider, GraphiQLConfig } from "./types.js";
 
 const STORAGE_NAMESPACE = "graphiql";
 
-export function createGraphiQLRoutes(hostServices: HostServices): Elysia {
+function buildGraphiQLRoutes(
+  hostServices: HostServices,
+  prefix: string,
+): Elysia {
   // The agent's runtime storage exposes a `delete` returning Promise<boolean>;
   // narrow once at the boundary so the route handlers can branch on the
   // delete result for a clearer 404 response.
   const storage = hostServices.storage as unknown as AgentStorageProvider;
 
   const app = new RoutesBuilder("graphiql", hostServices)
-    .withPrefix("/api/graphiql")
+    .withPrefix(prefix)
     .withErrorHandler()
     .build();
 
@@ -97,4 +110,23 @@ export function createGraphiQLRoutes(hostServices: HostServices): Elysia {
     });
 
   return wired as unknown as Elysia;
+}
+
+/**
+ * Server-to-server mount at `/api/graphiql/*`. Reached via the svc
+ * proxy (x-agent-api-key) — preserves the pre-P0-SEC-03 path so
+ * existing svc resolvers stay valid without coordinated changes.
+ */
+export function createGraphiQLRoutes(hostServices: HostServices): Elysia {
+  return buildGraphiQLRoutes(hostServices, "/api/graphiql");
+}
+
+/**
+ * Browser-bound mirror mount at `/api/plugins/graphiql/ui/*` (P0-SEC-03
+ * — matches the agent's iframe-token allow-list so the iframe XHR can
+ * call this surface with a `/api/plugins/<plugin>/ui` scoped token).
+ * Same handlers as the server mount.
+ */
+export function createGraphiQLUIRoutes(hostServices: HostServices): Elysia {
+  return buildGraphiQLRoutes(hostServices, "/api/plugins/graphiql/ui");
 }

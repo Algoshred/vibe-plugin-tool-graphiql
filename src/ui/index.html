@@ -241,10 +241,9 @@
         // is still read for backward-compat with older embedders.
         var iframeToken = getQueryParam("vt") || "";
         var apiKey = getQueryParam("apiKey") || "";
-        // The agent's data-plane is profile-scoped: every `/api/*` call must
-        // be `/api/profiles/<profile>/...` — bare `/api/*` is rejected (410).
         // The host passes the owning profile via `?profile=`; default to the
-        // daemon's boot profile ("default") for single-profile agents.
+        // daemon's boot profile ("default") for single-profile agents. Kept
+        // for diagnostics + backward-compat with older host shells.
         var profile = getQueryParam("profile") || "default";
 
         if (!vibeId) {
@@ -255,12 +254,19 @@
           return;
         }
 
+        // P0-SEC-03 — the iframe-token allow-list permits browser-bound
+        // plugin REST under `/api/plugins/<plugin>/ui[/...]`. Earlier
+        // shapes (`/api/profiles/<p>/graphiql/...`, `/api/graphiql/...`)
+        // are no longer mintable for browser flows; the token bound to
+        // `/api/plugins/graphiql/ui` matches this bare path directly.
+        // The host's bare-`/api/*` rewrite assumes default profile, so
+        // single-profile agents resolve transparently; multi-profile
+        // agents see the route via the active plugin router for the
+        // boot profile, which is the one that owns the iframe-token mint.
         var apiBase = getApiBase();
         var configUrl =
           apiBase +
-          "/api/profiles/" +
-          encodeURIComponent(profile) +
-          "/graphiql/config/" +
+          "/api/plugins/graphiql/ui/config/" +
           encodeURIComponent(vibeId);
 
         var headers = {
@@ -296,9 +302,9 @@
                 "No GraphQL endpoint configured",
                 "Use PUT /api/profiles/" +
                   profile +
-                  "/graphiql/config/" +
+                  "/api/plugins/graphiql/ui/config/" +
                   vibeId +
-                  " to set a graphqlUrl before opening the playground.",
+                  " (svc-proxied) to set a graphqlUrl before opening the playground.",
               );
             } else {
               showError("Failed to load configuration", err.message);

@@ -6,8 +6,8 @@
  * and serves a static HTML UI that renders the GraphiQL React component.
  *
  * Registers:
- *   - Elysia routes: /api/graphiql/*  (REST API for config management)
- *   - Static UI:     src/ui/          (GraphiQL HTML served via staticDir)
+ *   - Elysia routes: /api/plugins/graphiql/ui/*  (REST API for config management)
+ *   - Static UI:     src/ui/                     (GraphiQL HTML served via staticDir)
  *
  * Migrated to consume `@vibecontrols/plugin-sdk` for the contract,
  * lifecycle, and telemetry helpers.
@@ -67,7 +67,7 @@ type GraphiQLVibePlugin = VibePlugin & {
 };
 
 const PLUGIN_NAME = "graphiql";
-const PLUGIN_VERSION = "2026.509.1";
+const PLUGIN_VERSION = "2026.531.1";
 
 export const createPlugin: VibePluginFactory = (
   _ctx: ProfileContext,
@@ -97,6 +97,14 @@ export const createPlugin: VibePluginFactory = (
     description: "GraphQL Playground (GraphiQL)",
     tags: ["frontend", "integration"],
     hasUI: true,
+    // P0-SEC-03 migration — `apiPrefix` stays at `/api/graphiql` so the
+    // existing svc → agent server-to-server proxy (x-agent-api-key auth,
+    // path `/api/profiles/<profile>/graphiql/...`) keeps working. The
+    // browser-bound mirror is mounted at `/api/plugins/graphiql/ui` in
+    // `onServerStart` so the iframe XHR (iframe-token authed) reaches
+    // the same handlers under the agent's iframe-token allow-list
+    // (`/api/plugins/<plugin>/ui[/...]`). Both mounts share the same
+    // RoutesBuilder handler module — only the prefix differs.
     apiPrefix: "/api/graphiql",
     ui: {
       staticDir: join(import.meta.dir, "ui"),
@@ -105,7 +113,7 @@ export const createPlugin: VibePluginFactory = (
       capabilities: {
         restPaths: [
           "/ui/graphiql",
-          "/api/graphiql",
+          "/api/plugins/graphiql/ui",
         ],
         wsTopics: [],
         rpcMethods: ["getContext"],
@@ -124,7 +132,7 @@ export const createPlugin: VibePluginFactory = (
           capabilities: {
             restPaths: [
               "/ui/graphiql",
-              "/api/graphiql",
+              "/api/plugins/graphiql/ui",
             ],
             wsTopics: [],
             rpcMethods: ["getContext"],
@@ -138,12 +146,19 @@ export const createPlugin: VibePluginFactory = (
 
       const elysiaApp = app as { use: (plugin: unknown) => unknown };
 
-      // Register REST API routes
-      const { createGraphiQLRoutes } = await import("./routes.js");
+      // Register REST API routes. Two parallel mounts:
+      //   - /api/graphiql/*            — server-to-server (svc proxy)
+      //   - /api/plugins/graphiql/ui/* — browser iframe XHR (matches the
+      //                                  agent's iframe-token allow-list)
+      // Same handlers; only the mount prefix differs.
+      const { createGraphiQLRoutes, createGraphiQLUIRoutes } = await import(
+        "./routes.js"
+      );
       elysiaApp.use(createGraphiQLRoutes(hostServices));
+      elysiaApp.use(createGraphiQLUIRoutes(hostServices));
 
       process.stdout.write(
-        "  Plugin 'graphiql' registered routes: /api/graphiql\n",
+        "  Plugin 'graphiql' registered routes: /api/graphiql, /api/plugins/graphiql/ui\n",
       );
     },
 
@@ -172,7 +187,7 @@ export const createPlugin: VibePluginFactory = (
                 "GraphiQL playground capability metadata for the LLM Context feature.",
               data: {
                 pluginVersion: PLUGIN_VERSION,
-                apiPrefix: "/api/graphiql",
+                apiPrefix: "/api/plugins/graphiql/ui",
               },
             };
           },
