@@ -111,10 +111,7 @@ export const createPlugin: VibePluginFactory = (
       title: "GraphQL Playground",
       icon: "Network",
       capabilities: {
-        restPaths: [
-          "/ui/graphiql",
-          "/api/plugins/graphiql/ui",
-        ],
+        restPaths: ["/ui/graphiql", "/api/plugins/graphiql/ui"],
         wsTopics: [],
         rpcMethods: ["getContext"],
       },
@@ -130,10 +127,7 @@ export const createPlugin: VibePluginFactory = (
           order: 90,
           runtimes: ["iframe"],
           capabilities: {
-            restPaths: [
-              "/ui/graphiql",
-              "/api/plugins/graphiql/ui",
-            ],
+            restPaths: ["/ui/graphiql", "/api/plugins/graphiql/ui"],
             wsTopics: [],
             rpcMethods: ["getContext"],
           },
@@ -151,9 +145,8 @@ export const createPlugin: VibePluginFactory = (
       //   - /api/plugins/graphiql/ui/* — browser iframe XHR (matches the
       //                                  agent's iframe-token allow-list)
       // Same handlers; only the mount prefix differs.
-      const { createGraphiQLRoutes, createGraphiQLUIRoutes } = await import(
-        "./routes.js"
-      );
+      const { createGraphiQLRoutes, createGraphiQLUIRoutes } =
+        await import("./routes.js");
       elysiaApp.use(createGraphiQLRoutes(hostServices));
       elysiaApp.use(createGraphiQLUIRoutes(hostServices));
 
@@ -166,17 +159,18 @@ export const createPlugin: VibePluginFactory = (
 
     async onServerReady() {
       try {
-        const sdkContext = (await import("@vibecontrols/plugin-sdk/context")) as {
-          registerContextProvider?: (provider: {
-            name: string;
-            timeoutMs?: number;
-            getContext: () => Promise<{
-              pluginName: string;
-              description?: string;
-              data: Record<string, unknown>;
-            }>;
-          }) => void;
-        };
+        const sdkContext =
+          (await import("@vibecontrols/plugin-sdk/context")) as {
+            registerContextProvider?: (provider: {
+              name: string;
+              timeoutMs?: number;
+              getContext: () => Promise<{
+                pluginName: string;
+                description?: string;
+                data: Record<string, unknown>;
+              }>;
+            }) => void;
+          };
         sdkContext.registerContextProvider?.({
           name: "tool-graphiql",
           timeoutMs: 500,
