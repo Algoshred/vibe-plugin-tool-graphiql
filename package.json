@@ -56,10 +56,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/algoshred/vibe-plugin-tool-graphiql.git"
+    "url": "git+https://github.com/Algoshred/vibe-plugin-tool-graphiql.git"
   },
   "bugs": {
-    "url": "https://github.com/algoshred/vibe-plugin-tool-graphiql/issues"
+    "url": "https://github.com/Algoshred/vibe-plugin-tool-graphiql/issues"
   },
   "homepage": "https://vibecontrols.com",
   "publishConfig": {
